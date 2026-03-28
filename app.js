@@ -429,6 +429,7 @@ function buildJobRow(coId, job) {
   const fitCls = fit >= 70 ? 'fit-high' : fit >= 50 ? 'fit-med' : fit > 0 ? 'fit-low' : 'fit-none';
   const fitTxt = fit > 0 ? fit + '%' : '—';
   const hasUrl = job.url && job.url.trim() !== '';
+  const jdCls  = job.jdesc ? ' has-jd' : '';
 
   const selOpts = STATUSES.map(s =>
     `<option value="${s.v}" ${s.v===job.status?'selected':''}>${s.l}</option>`
@@ -480,7 +481,10 @@ function buildJobRow(coId, job) {
         onchange="updateJob('${coId}','${job.id}','notes',this.value)">
     </td>
     <td>
-      <button class="btn btn-sm btn-danger-ghost" onclick="deleteJob('${coId}','${job.id}')">✕</button>
+      <div style="display:flex;gap:4px;align-items:center">
+        <button class="btn-jd${jdCls}" title="Job description &amp; interview guide" onclick="openJdModal('${coId}','${job.id}')">📝</button>
+        <button class="btn btn-sm btn-danger-ghost" onclick="deleteJob('${coId}','${job.id}')">✕</button>
+      </div>
     </td>`;
 
   return row;
@@ -740,6 +744,214 @@ function showToast(msg, type='success') {
   el.className   = 'toast ' + type + ' show';
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+// ── JOB DESCRIPTION & INTERVIEW GUIDE ────────────────────────────────────────
+let jdState = { coId: null, jobId: null, ai: 'claude', lang: 'en' };
+
+function openJdModal(coId, jobId) {
+  const job = (jobsData[coId]||[]).find(j => j.id === jobId);
+  const co  = companies.find(c => c.id === coId);
+  if (!job || !co) return;
+  jdState.coId  = coId;
+  jdState.jobId = jobId;
+  document.getElementById('jd-subtitle').textContent = `${job.role || 'Role'} — ${co.name}`;
+  document.getElementById('jd-text').value = job.jdesc || '';
+  document.getElementById('jd-gen-hint').textContent = '';
+  document.getElementById('jd-output').classList.add('hidden');
+  document.getElementById('jd-placeholder').classList.remove('hidden');
+  const savedKey = localStorage.getItem('openai_api_key') || '';
+  if (savedKey) document.getElementById('jd-apikey').value = savedKey;
+  setJdAI(jdState.ai);
+  setJdLang(jdState.lang);
+  document.getElementById('modal-jd').classList.remove('hidden');
+  setTimeout(() => document.getElementById('jd-text').focus(), 60);
+}
+
+function closeJdModal() {
+  const { coId, jobId } = jdState;
+  if (coId && jobId) {
+    const desc = document.getElementById('jd-text').value.trim();
+    const job  = (jobsData[coId]||[]).find(j => j.id === jobId);
+    if (job) {
+      job.jdesc = desc;
+      const btn = document.querySelector(`#job-${jobId} .btn-jd`);
+      if (btn) btn.classList.toggle('has-jd', !!desc);
+    }
+  }
+  document.getElementById('modal-jd').classList.add('hidden');
+}
+
+function setJdAI(ai) {
+  jdState.ai = ai;
+  document.getElementById('tog-claude').classList.toggle('active',  ai === 'claude');
+  document.getElementById('tog-chatgpt').classList.toggle('active', ai === 'chatgpt');
+  document.getElementById('jd-apikey-wrap').style.display = ai === 'chatgpt' ? 'flex' : 'none';
+}
+
+function setJdLang(lang) {
+  jdState.lang = lang;
+  document.getElementById('tog-en').classList.toggle('active', lang === 'en');
+  document.getElementById('tog-he').classList.toggle('active', lang === 'he');
+}
+
+function saveApiKey() {
+  const key = document.getElementById('jd-apikey').value.trim();
+  if (key) { localStorage.setItem('openai_api_key', key); showToast('API key saved'); }
+  else     { localStorage.removeItem('openai_api_key');   showToast('API key cleared'); }
+}
+
+function buildPrompt(role, company, jdesc, lang) {
+  const langLine = lang === 'he'
+    ? 'Write the ENTIRE response in Hebrew (עברית).'
+    : 'Write the response in English.';
+  return `You are an expert technical interview coach.\n\nCreate a comprehensive interview preparation guide for the following position.\n\n**Job Title:** ${role}\n**Company:** ${company}\n**Output Language:** ${langLine}\n\n**Job Description:**\n---\n${jdesc}\n---\n\nProvide a structured guide with these sections:\n\n## 1. 🎯 Role Overview & Key Requirements\nSummarise what the company is looking for and the core responsibilities.\n\n## 2. 🛠 Technical Topics & Skills to Prepare\nList specific technologies, frameworks, concepts, and tools mentioned or implied.\n\n## 3. ❓ Likely Interview Questions & Answer Frameworks\nProvide 10–15 probable questions with strong answer approaches.\n\n## 4. 💬 Behavioral / HR Questions\n5 relevant behavioral questions with STAR-method answer tips.\n\n## 5. 🤔 Smart Questions to Ask the Interviewer\n5–7 thoughtful questions that show genuine interest in the role.\n\n## 6. 💡 Preparation Tips & Final Advice\nSpecific, actionable tips tailored to this role and tech stack.\n\nMake the guide practical, specific, and actionable.`;
+}
+
+async function generateGuide() {
+  const jdText = document.getElementById('jd-text').value.trim();
+  if (!jdText) { showToast('Please paste a job description first', 'error'); return; }
+
+  const { coId, jobId, ai, lang } = jdState;
+  const job = (jobsData[coId]||[]).find(j => j.id === jobId);
+  const co  = companies.find(c => c.id === coId);
+  if (!job || !co) return;
+
+  // Persist description immediately
+  job.jdesc = jdText;
+  const rowBtn = document.querySelector(`#job-${jobId} .btn-jd`);
+  if (rowBtn) rowBtn.classList.add('has-jd');
+
+  const prompt  = buildPrompt(job.role || 'Software Engineer', co.name, jdText, lang);
+  const genBtn  = document.getElementById('jd-gen-btn');
+  const hint    = document.getElementById('jd-gen-hint');
+  const output  = document.getElementById('jd-output');
+  const content = document.getElementById('jd-output-content');
+  const pholder = document.getElementById('jd-placeholder');
+
+  const apiKey = localStorage.getItem('openai_api_key') || document.getElementById('jd-apikey').value.trim();
+
+  const showOutput = () => { pholder.classList.add('hidden'); output.classList.remove('hidden'); };
+
+  // Claude — direct browser API calls are CORS-blocked; copy prompt + open claude.ai
+  if (ai === 'claude') {
+    showOutput();
+    let copied = false;
+    try { await navigator.clipboard.writeText(prompt); copied = true; } catch(e) {}
+    window.open('https://claude.ai/new', '_blank', 'noopener');
+    hint.textContent = copied ? '✅ Prompt copied to clipboard!' : '';
+    content.innerHTML = renderClipboardNotice(prompt, copied, 'Claude');
+    content.dir = 'ltr';
+    return;
+  }
+
+  // ChatGPT without API key — copy + open chatgpt.com
+  if (!apiKey) {
+    showOutput();
+    let copied = false;
+    try { await navigator.clipboard.writeText(prompt); copied = true; } catch(e) {}
+    window.open('https://chatgpt.com/', '_blank', 'noopener');
+    hint.textContent = copied ? '✅ Prompt copied to clipboard!' : '';
+    content.innerHTML = renderClipboardNotice(prompt, copied, 'ChatGPT');
+    content.dir = 'ltr';
+    return;
+  }
+
+  // ChatGPT with API key — inline generation via OpenAI API
+  showOutput();
+  genBtn.disabled = true;
+  genBtn.innerHTML = '⏳ Generating…';
+  content.innerHTML = `<div class="jd-loading"><div class="jd-loading-icon">⚡</div>Generating your interview guide…</div>`;
+  content.dir = lang === 'he' ? 'rtl' : 'ltr';
+  hint.textContent = '';
+
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 3500,
+        temperature: 0.7,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error?.message || `HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    const text = data.choices?.[0]?.message?.content || '';
+    content.innerHTML = formatGuide(text);
+    hint.textContent = '✅ Guide generated!';
+  } catch (err) {
+    content.innerHTML = `<div class="jd-error">⚠️ ${esc(err.message)}<br><small>Check your API key or try without a key to open ChatGPT manually.</small></div>`;
+    showToast('Generation failed — check API key', 'error');
+  } finally {
+    genBtn.disabled = false;
+    genBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="width:14px;height:14px;flex-shrink:0"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Generate Interview Guide`;
+  }
+}
+
+function renderClipboardNotice(prompt, copied, aiName) {
+  const safePrompt = prompt.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return `
+    <div class="jd-clipboard-notice">
+      <div class="jd-clipboard-title">${copied ? '✅ Prompt copied to clipboard!' : '📋 Ready to generate'}</div>
+      <p style="color:var(--text2);margin-bottom:10px">${aiName} is opening in a new tab.</p>
+      <ol class="jd-clipboard-steps">
+        <li>Switch to the new <strong>${aiName}</strong> tab that just opened.</li>
+        <li>${copied ? 'Paste the prompt (<kbd>Ctrl+V</kbd> / <kbd>⌘V</kbd>).' : `Copy the prompt below, then paste it into ${aiName}.`}</li>
+        <li>Send the message to generate your interview guide.</li>
+      </ol>
+      <details class="jd-prompt-details">
+        <summary>View prompt</summary>
+        <pre class="jd-prompt-preview">${safePrompt}</pre>
+      </details>
+    </div>`;
+}
+
+function applyInline(t) {
+  return t
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*([^*\n]+?)\*/g, '<em>$1</em>')
+    .replace(/`([^`\n]+?)`/g, '<code>$1</code>');
+}
+
+function formatGuide(raw) {
+  const escHtml = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const lines = raw.split('\n');
+  const out   = [];
+  const stack = []; // open list tags
+  const closeList = () => { while (stack.length) out.push(`</${stack.pop()}>`); };
+
+  for (const rawLine of lines) {
+    const line = escHtml(rawLine);
+    let m;
+    if ((m = line.match(/^### (.+)/)))  { closeList(); out.push(`<h4>${applyInline(m[1])}</h4>`); continue; }
+    if ((m = line.match(/^## (.+)/)))   { closeList(); out.push(`<h3>${applyInline(m[1])}</h3>`); continue; }
+    if ((m = line.match(/^# (.+)/)))    { closeList(); out.push(`<h2>${applyInline(m[1])}</h2>`); continue; }
+    if ((m = line.match(/^[-*•] (.+)/))) {
+      if (!stack.length || stack.at(-1) !== 'ul') { closeList(); out.push('<ul>'); stack.push('ul'); }
+      out.push(`<li>${applyInline(m[1])}</li>`); continue;
+    }
+    if ((m = line.match(/^\d+\. (.+)/))) {
+      if (!stack.length || stack.at(-1) !== 'ol') { closeList(); out.push('<ol>'); stack.push('ol'); }
+      out.push(`<li>${applyInline(m[1])}</li>`); continue;
+    }
+    if (line.trim() === '') { closeList(); continue; }
+    closeList();
+    out.push(`<p>${applyInline(line)}</p>`);
+  }
+  closeList();
+  return out.join('\n');
+}
+
+function copyGuide() {
+  const text = document.getElementById('jd-output-content').innerText;
+  navigator.clipboard.writeText(text)
+    .then(() => showToast('Guide copied to clipboard!'))
+    .catch(() => showToast('Copy failed', 'error'));
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────

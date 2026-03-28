@@ -179,6 +179,87 @@
   </div>
 </div>
 
+<!-- ── JOB DESCRIPTION & INTERVIEW GUIDE MODAL ────────────────────────────── -->
+<div class="modal-overlay hidden" id="modal-jd">
+  <div class="modal modal-jd">
+
+    <div class="modal-jd-header">
+      <div>
+        <h2>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:6px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          Job Description &amp; Interview Guide
+        </h2>
+        <p class="modal-jd-subtitle" id="jd-subtitle"></p>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="closeJdModal()">✕ Close</button>
+    </div>
+
+    <div class="modal-jd-body">
+
+      <!-- Left: controls -->
+      <div class="modal-jd-col-left">
+
+        <div class="jd-options">
+          <div class="jd-opt-group">
+            <span class="jd-opt-label">AI</span>
+            <button class="btn-toggle active" id="tog-claude"  onclick="setJdAI('claude')">Claude</button>
+            <button class="btn-toggle"        id="tog-chatgpt" onclick="setJdAI('chatgpt')">ChatGPT</button>
+          </div>
+          <div class="jd-opt-group">
+            <span class="jd-opt-label">Language</span>
+            <button class="btn-toggle active" id="tog-en" onclick="setJdLang('en')">English</button>
+            <button class="btn-toggle"        id="tog-he" onclick="setJdLang('he')">עברית</button>
+          </div>
+        </div>
+
+        <div class="jd-apikey-wrap" id="jd-apikey-wrap">
+          <label>OpenAI API Key <span class="jd-note">(saved locally in browser — needed for inline generation)</span></label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="password" class="form-input" id="jd-apikey" placeholder="sk-…" style="flex:1;font-size:11px">
+            <button class="btn btn-ghost btn-sm" onclick="saveApiKey()">Save</button>
+          </div>
+        </div>
+
+        <div class="jd-field">
+          <label class="jd-field-label">Job Description</label>
+          <textarea class="jd-textarea" id="jd-text"
+            placeholder="Paste the full job description here…&#10;&#10;The more detail you provide, the better your interview guide will be."></textarea>
+        </div>
+
+        <div class="jd-generate-area">
+          <button class="btn btn-primary jd-gen-btn" id="jd-gen-btn" onclick="generateGuide()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="width:14px;height:14px;flex-shrink:0"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            Generate Interview Guide
+          </button>
+          <p class="jd-gen-hint" id="jd-gen-hint"></p>
+        </div>
+
+      </div>
+
+      <!-- Right: output -->
+      <div class="modal-jd-col-right">
+
+        <div class="jd-placeholder" id="jd-placeholder">
+          <div class="jd-placeholder-icon">🎯</div>
+          <p>Enter the job description and click <strong>Generate Interview Guide</strong> to create your personalised preparation plan.</p>
+        </div>
+
+        <div class="jd-output hidden" id="jd-output">
+          <div class="jd-output-toolbar">
+            <span class="jd-output-title">Interview Guide</span>
+            <button class="btn btn-ghost btn-sm" onclick="copyGuide()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              Copy
+            </button>
+          </div>
+          <div class="jd-output-content" id="jd-output-content"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ── TOAST ───────────────────────────────────────────────────────────────── -->
 <div class="toast" id="toast"></div>
 
