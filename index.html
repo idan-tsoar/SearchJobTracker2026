@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Israel Tech Job Tracker — Idan Tsoar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ── HEADER ─────────────────────────────────────────────────────────────── -->
+<header class="header">
+  <div class="header-inner">
+
+    <div class="header-top">
+      <div class="brand">
+        <h1>Israel Tech Job Tracker <em>// Idan Tsoar</em></h1>
+        <p>100 best R&amp;D companies · NASDAQ/NYSE preferred · Click a company to add &amp; track jobs</p>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-success" onclick="saveData()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          Save
+        </button>
+        <button class="btn btn-ghost" onclick="exportJson()" title="Download data.json backup file">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export JSON
+        </button>
+        <button class="btn btn-ghost" onclick="importJson()" title="Load data from a previously exported data.json">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Import JSON
+        </button>
+        <button class="btn btn-primary" onclick="openAddModal()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Company
+        </button>
+        <button class="btn btn-ghost" onclick="exportCSV()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export CSV
+        </button>
+        <span class="save-indicator" id="save-ind">Data auto-saves in your browser</span>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats">
+      <div class="stat">
+        <span class="stat-num" id="sc-visible">100</span>
+        <span class="stat-label">Companies<br>Visible</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num" id="sc-jobs">0</span>
+        <span class="stat-label">Total Jobs<br>Tracked</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num" id="sc-applied">0</span>
+        <span class="stat-label">Jobs<br>Applied</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num y" id="sc-progress">0</span>
+        <span class="stat-label">In Progress<br>(Interviews)</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num g" id="sc-offers">0</span>
+        <span class="stat-label">Offers<br>Received</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num p" id="sc-rate">0%</span>
+        <span class="stat-label">Response<br>Rate</span>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters">
+      <div class="filter-group">
+        <span class="filter-label">City</span>
+        <button class="btn-filter active" onclick="setCity('all',this)">All</button>
+        <button class="btn-filter" onclick="setCity('Raanana',this)">Raanana</button>
+        <button class="btn-filter" onclick="setCity('Herzliya',this)">Herzliya</button>
+        <button class="btn-filter" onclick="setCity('Petach Tikva',this)">Petach Tikva</button>
+        <button class="btn-filter" onclick="setCity('Hod HaSharon',this)">Hod HaSharon</button>
+        <button class="btn-filter" onclick="setCity('Kfar Saba',this)">Kfar Saba</button>
+        <button class="btn-filter" onclick="setCity('Multiple',this)">Multiple</button>
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">Exchange</span>
+        <button class="btn-filter active" onclick="setEx('all',this)">All</button>
+        <button class="btn-filter" onclick="setEx('NASDAQ',this)">NASDAQ</button>
+        <button class="btn-filter" onclick="setEx('NYSE',this)">NYSE</button>
+        <button class="btn-filter" onclick="setEx('TASE',this)">TASE</button>
+        <button class="btn-filter" onclick="setEx('Private',this)">Private</button>
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">Jobs</span>
+        <button class="btn-filter active" onclick="setStatus('all',this)">All</button>
+        <button class="btn-filter" onclick="setStatus('has_jobs',this)">Has Jobs</button>
+        <button class="btn-filter" onclick="setStatus('applied',this)">Applied</button>
+        <button class="btn-filter" onclick="setStatus('in_progress',this)">In Progress</button>
+        <button class="btn-filter" onclick="setStatus('no_jobs',this)">No Jobs Yet</button>
+      </div>
+      <div class="filter-group" style="border:none">
+        <div class="search-wrap">
+          <input class="search-input" type="text" placeholder="Search company / domain..."
+            oninput="setSearch(this.value)">
+        </div>
+      </div>
+    </div>
+
+  </div>
+</header>
+
+<!-- ── MAIN TABLE ──────────────────────────────────────────────────────────── -->
+<main class="content">
+  <div class="companies-table-wrap">
+    <table class="companies-table">
+      <thead>
+        <tr>
+          <th style="width:30px"></th>
+          <th>Company</th>
+          <th>City</th>
+          <th>Careers Page</th>
+          <th>Jobs</th>
+          <th></th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+</main>
+
+<!-- ── ADD COMPANY MODAL ───────────────────────────────────────────────────── -->
+<div class="modal-overlay hidden" id="modal-add">
+  <div class="modal">
+    <h2>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:6px;vertical-align:middle"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Add Company
+    </h2>
+    <div class="modal-field">
+      <label>Company Name *</label>
+      <input id="m-name" type="text" placeholder="e.g. Wix">
+    </div>
+    <div class="modal-field">
+      <label>Domain / Industry</label>
+      <input id="m-domain" type="text" placeholder="e.g. Web Platform, SaaS">
+    </div>
+    <div class="modal-field">
+      <label>City</label>
+      <select id="m-city">
+        <option>Raanana</option>
+        <option>Herzliya</option>
+        <option>Petach Tikva</option>
+        <option>Hod HaSharon</option>
+        <option>Kfar Saba</option>
+        <option>Multiple</option>
+        <option>Other</option>
+      </select>
+    </div>
+    <div class="modal-field">
+      <label>Exchange</label>
+      <select id="m-ex">
+        <option>NASDAQ</option>
+        <option>NYSE</option>
+        <option>TASE</option>
+        <option>Private</option>
+      </select>
+    </div>
+    <div class="modal-field">
+      <label>Careers Page URL</label>
+      <input id="m-careers" type="text" placeholder="https://company.com/careers">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeAddModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitAddCompany()">Add Company</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── TOAST ───────────────────────────────────────────────────────────────── -->
+<div class="toast" id="toast"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
