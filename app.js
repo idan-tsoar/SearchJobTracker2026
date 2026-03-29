@@ -133,6 +133,7 @@ let jobsData    = {};
 let customCos   = [];
 let expanded    = new Set();
 let showAddForm = new Set();
+let reviewed    = new Set();
 let fCity='all', fEx='all', fStatus='all', fQ='';
 
 // ── LOAD DATA ────────────────────────────────────────────────────────────────
@@ -176,6 +177,7 @@ async function loadData() {
         if (data.jobs && Object.keys(data.jobs).length > 0) {
           jobsData  = data.jobs            || {};
           customCos = data.customCompanies || [];
+          reviewed  = new Set(data.reviewed || []);
           customCos.forEach(c => { if (!companies.find(x=>x.id===c.id)) companies.push(c); });
           showToast('Data loaded from browser storage');
           loaded = true;
@@ -194,7 +196,7 @@ async function loadData() {
 // ── SAVE DATA ────────────────────────────────────────────────────────────────
 // Saves to localStorage. Export JSON button downloads data.json for backup/portability.
 function saveData() {
-  const payload = { version:VERSION, lastSaved:new Date().toISOString(), jobs:jobsData, customCompanies:customCos };
+  const payload = { version:VERSION, lastSaved:new Date().toISOString(), jobs:jobsData, customCompanies:customCos, reviewed:[...reviewed] };
   try {
     localStorage.setItem(LS_KEY, JSON.stringify(payload));
     const ind = document.getElementById('save-ind');
@@ -208,7 +210,7 @@ function saveData() {
 
 // ── EXPORT JSON BACKUP ────────────────────────────────────────────────────────
 function exportJson() {
-  const payload = { version:VERSION, lastSaved:new Date().toISOString(), jobs:jobsData, customCompanies:customCos };
+  const payload = { version:VERSION, lastSaved:new Date().toISOString(), jobs:jobsData, customCompanies:customCos, reviewed:[...reviewed] };
   const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
   const a    = document.createElement('a');
   a.href     = URL.createObjectURL(blob);
@@ -232,6 +234,7 @@ function importJson() {
         const data = JSON.parse(ev.target.result);
         jobsData  = data.jobs            || {};
         customCos = data.customCompanies || [];
+        reviewed  = new Set(data.reviewed || []);
         companies = [...BASE_COMPANIES];
         customCos.forEach(c => { if (!companies.find(x=>x.id===c.id)) companies.push(c); });
         expanded    = new Set();
@@ -281,7 +284,7 @@ function renderTable() {
 
     // ── Company row ────────────────────────────────────────────────────────
     const coRow = document.createElement('tr');
-    coRow.className = 'co-row' + (isExp ? ' expanded' : '');
+    coRow.className = 'co-row' + (isExp ? ' expanded' : '') + (reviewed.has(co.id) ? ' co-reviewed' : '');
     coRow.id = 'co-' + co.id;
     coRow.onclick = () => toggleExpand(co.id);
     coRow.innerHTML = `
@@ -314,6 +317,11 @@ function renderTable() {
       </td>
       <td onclick="event.stopPropagation()">
         <button class="btn btn-sm btn-danger-ghost" onclick="deleteCompany('${co.id}')">✕</button>
+      </td>
+      <td style="text-align:center" onclick="event.stopPropagation()">
+        <input type="checkbox" class="reviewed-check" title="Mark as reviewed — I've finished browsing all open jobs"
+          ${reviewed.has(co.id)?'checked':''}
+          onchange="toggleReviewed('${co.id}',this)">
       </td>`;
     tbody.appendChild(coRow);
 
@@ -321,7 +329,7 @@ function renderTable() {
     const panelRow = document.createElement('tr');
     panelRow.className = 'jobs-panel-row' + (isExp ? ' open' : '');
     panelRow.id = 'panel-' + co.id;
-    panelRow.innerHTML = `<td class="jobs-panel-cell" colspan="7"></td>`;
+    panelRow.innerHTML = `<td class="jobs-panel-cell" colspan="8"></td>`;
     tbody.appendChild(panelRow);
 
     if (isExp) {
@@ -488,6 +496,30 @@ function buildJobRow(coId, job) {
     </td>`;
 
   return row;
+}
+
+// ── TOGGLE REVIEWED ─────────────────────────────────────────────────────────
+function toggleReviewed(coId, el) {
+  if (el.checked) {
+    reviewed.add(coId);
+  } else {
+    reviewed.delete(coId);
+  }
+  const coRow = document.getElementById('co-' + coId);
+  if (coRow) coRow.classList.toggle('co-reviewed', reviewed.has(coId));
+  saveData();
+}
+
+// ── TOGGLE REVIEWED ───────────────────────────────────────────────────────────
+function toggleReviewed(coId, el) {
+  if (el.checked) {
+    reviewed.add(coId);
+  } else {
+    reviewed.delete(coId);
+  }
+  const coRow = document.getElementById('co-' + coId);
+  if (coRow) coRow.classList.toggle('co-reviewed', reviewed.has(coId));
+  saveData();
 }
 
 // ── TOGGLE EXPAND ─────────────────────────────────────────────────────────────
@@ -959,5 +991,19 @@ function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').repl
 
 
 
+// ── THEME ─────────────────────────────────────────────────────────────────────
+function setTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('idan_theme', theme);
+  const sel = document.getElementById('theme-select');
+  if (sel) sel.value = theme;
+}
+
+function initTheme() {
+  const saved = localStorage.getItem('idan_theme') || 'navy';
+  setTheme(saved);
+}
+
 // ── INIT ──────────────────────────────────────────────────────────────────────
+initTheme();
 loadData(); // async — fetches data.json first, falls back to localStorage

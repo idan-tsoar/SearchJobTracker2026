@@ -1,7 +1,10 @@
 /* ── RESET & ROOT ─────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-:root {
+/* ── THEMES ──────────────────────────────────────────────────────────────── */
+/* Default: Dark Navy (original) */
+:root,
+[data-theme="navy"] {
   --bg:        #080b12;
   --panel:     #0e1220;
   --card:      #121828;
@@ -17,9 +20,9 @@
   --purple:    #8b5cf6;
   --cyan:      #06b6d4;
   --pink:      #ec4899;
-  --text:      #e2e8f0;
-  --text2:     #94a3b8;
-  --text3:     #4b5f7c;
+  --text:      #f1f5f9;
+  --text2:     #c4d0e3;
+  --text3:     #7a90ad;
   --nas:       #3b82f6;
   --nyse:      #8b5cf6;
   --tase:      #06b6d4;
@@ -27,8 +30,88 @@
   --job-bg:    #0a1020;
 }
 
+/* Theme: Warm Charcoal — deep amber/brown backgrounds */
+[data-theme="warm"] {
+  --bg:        #130e08;
+  --panel:     #1d160d;
+  --card:      #271e12;
+  --card2:     #2f2418;
+  --border:    #4a3820;
+  --border2:   #5c4828;
+  --accent:    #f59e0b;
+  --accent-glow: rgba(245,158,11,0.18);
+  --green:     #86efac;
+  --yellow:    #fde68a;
+  --red:       #fca5a5;
+  --orange:    #fdba74;
+  --purple:    #c4b5fd;
+  --cyan:      #67e8f9;
+  --pink:      #f9a8d4;
+  --text:      #faf5ee;
+  --text2:     #d4c9b8;
+  --text3:     #8a7d6a;
+  --nas:       #f59e0b;
+  --nyse:      #c4b5fd;
+  --tase:      #67e8f9;
+  --pri:       #57503e;
+  --job-bg:    #0c0a08;
+}
+
+/* Theme: Clean Light — white/light grey backgrounds with dark text */
+[data-theme="light"] {
+  --bg:        #eef2f7;
+  --panel:     #e2e8f2;
+  --card:      #ffffff;
+  --card2:     #f1f5fb;
+  --border:    #c5d1e4;
+  --border2:   #adbdd6;
+  --accent:    #1d4ed8;
+  --accent-glow: rgba(29,78,216,0.12);
+  --green:     #059669;
+  --yellow:    #b45309;
+  --red:       #dc2626;
+  --orange:    #c2410c;
+  --purple:    #7c3aed;
+  --cyan:      #0891b2;
+  --pink:      #be185d;
+  --text:      #0f172a;
+  --text2:     #1e3a5c;
+  --text3:     #4a6484;
+  --nas:       #1d4ed8;
+  --nyse:      #7c3aed;
+  --tase:      #0891b2;
+  --pri:       #475569;
+  --job-bg:    #dde5f0;
+}
+
+/* ── THEME SWITCHER WIDGET ───────────────────────────────────────────────── */
+.theme-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.theme-switcher label {
+  font-size: 11px;
+  color: var(--text3);
+  white-space: nowrap;
+}
+.theme-select {
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  padding: 6px 10px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-family: 'Sora', sans-serif;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.theme-select:hover, .theme-select:focus { border-color: var(--accent); }
+
 body {
   font-family: 'Sora', sans-serif;
+  font-size: 14px;
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
@@ -43,7 +126,7 @@ body {
 
 /* ── HEADER ─────────────────────────────────────────────────────────────── */
 .header {
-  background: linear-gradient(180deg, #0c1221 0%, #080b12 100%);
+  background: linear-gradient(180deg, var(--panel) 0%, var(--bg) 100%);
   border-bottom: 1px solid var(--border);
   padding: 28px 32px 22px;
   position: sticky;
@@ -71,7 +154,7 @@ body {
   color: var(--text);
 }
 .brand h1 em { color: var(--accent); font-style: normal; }
-.brand p { font-size: 11px; color: var(--text2); margin-top: 2px; }
+.brand p { font-size: 13px; color: var(--text2); margin-top: 2px; }
 
 .header-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 
@@ -102,7 +185,7 @@ body {
 .stat-num.g { color: var(--green); }
 .stat-num.y { color: var(--yellow); }
 .stat-num.p { color: var(--purple); }
-.stat-label { font-size: 10px; color: var(--text2); line-height: 1.4; }
+.stat-label { font-size: 12px; color: var(--text2); line-height: 1.4; }
 
 /* ── FILTER BAR ──────────────────────────────────────────────────────────── */
 .filters { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
@@ -118,8 +201,8 @@ body {
 .filter-group:last-of-type { border-right: none; }
 
 .filter-label {
-  font-size: 9px;
-  color: var(--text3);
+  font-size: 11px;
+  color: var(--text2);
   text-transform: uppercase;
   letter-spacing: 0.8px;
   white-space: nowrap;
@@ -129,9 +212,9 @@ body {
   background: transparent;
   border: 1px solid var(--border);
   color: var(--text2);
-  padding: 4px 10px;
+  padding: 5px 12px;
   border-radius: 20px;
-  font-size: 11px;
+  font-size: 12px;
   font-family: 'Sora', sans-serif;
   cursor: pointer;
   transition: all 0.15s;
@@ -157,9 +240,9 @@ body {
   color: var(--text);
   padding: 5px 12px 5px 28px;
   border-radius: 20px;
-  font-size: 11px;
+  font-size: 13px;
   font-family: 'Sora', sans-serif;
-  width: 190px;
+  width: 200px;
   outline: none;
   transition: border-color 0.15s;
 }
@@ -170,9 +253,9 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 7px 14px;
+  padding: 8px 16px;
   border-radius: 7px;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
   font-family: 'Sora', sans-serif;
   cursor: pointer;
@@ -227,7 +310,7 @@ body {
 }
 
 /* save indicator */
-.save-indicator { font-size: 10px; color: var(--text3); }
+.save-indicator { font-size: 12px; color: var(--text2); }
 .save-indicator.ok { color: var(--green); }
 
 /* ── MAIN CONTENT ────────────────────────────────────────────────────────── */
@@ -239,7 +322,7 @@ body {
 .companies-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .companies-table thead tr {
@@ -250,11 +333,11 @@ body {
 .companies-table th {
   text-align: left;
   padding: 10px 14px;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.8px;
-  color: var(--text3);
+  color: var(--text2);
   white-space: nowrap;
 }
 
@@ -267,6 +350,24 @@ body {
 .co-row:hover { background: var(--card2); }
 .co-row.expanded { background: var(--card2); border-bottom: none; }
 .co-row.hidden { display: none; }
+
+/* Reviewed state — user has gone through all open jobs for this company */
+.co-row.co-reviewed {
+  background: rgba(16, 185, 129, 0.07);
+  border-left: 3px solid var(--green);
+}
+.co-row.co-reviewed:hover { background: rgba(16, 185, 129, 0.12); }
+.co-row.co-reviewed.expanded { background: rgba(16, 185, 129, 0.10); }
+.co-row.co-reviewed .co-name { color: var(--green); }
+.co-row.co-reviewed .co-domain { color: rgba(16, 185, 129, 0.7); }
+
+/* Reviewed checkbox */
+.reviewed-check {
+  width: 17px;
+  height: 17px;
+  cursor: pointer;
+  accent-color: var(--green);
+}
 
 .co-row td { padding: 11px 14px; vertical-align: middle; }
 
@@ -287,14 +388,14 @@ body {
 .co-row.expanded .chevron { background: var(--accent-glow); border-color: var(--accent); transform: rotate(90deg); }
 .co-row.expanded .chevron svg { color: var(--accent); }
 
-.co-name { font-weight: 600; color: var(--text); font-size: 13px; display: flex; align-items: center; gap: 8px; }
-.co-domain { font-size: 10px; color: var(--text2); margin-top: 2px; }
+.co-name { font-weight: 600; color: var(--text); font-size: 15px; display: flex; align-items: center; gap: 8px; }
+.co-domain { font-size: 12px; color: var(--text2); margin-top: 2px; }
 
 .ex-pill {
   display: inline-block;
-  padding: 2px 7px;
+  padding: 3px 8px;
   border-radius: 4px;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.3px;
   flex-shrink: 0;
@@ -311,7 +412,7 @@ body {
   color: #93c5fd;
   padding: 3px 9px;
   border-radius: 5px;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 500;
   white-space: nowrap;
 }
@@ -335,12 +436,12 @@ body {
 
 .careers-link {
   color: var(--accent);
-  font-size: 11px;
+  font-size: 12px;
   text-decoration: none;
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 10px;
+  padding: 5px 11px;
   border-radius: 5px;
   background: var(--accent-glow);
   border: 1px solid rgba(59,130,246,0.25);
@@ -378,7 +479,7 @@ body {
 }
 
 .jobs-panel-title {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--text2);
   text-transform: uppercase;
@@ -386,7 +487,7 @@ body {
 }
 
 /* jobs sub-table */
-.jobs-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.jobs-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 
 .jobs-table thead tr {
   border-bottom: 1px solid var(--border);
@@ -394,11 +495,11 @@ body {
 .jobs-table th {
   text-align: left;
   padding: 8px 10px;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.7px;
-  color: var(--text3);
+  color: var(--text2);
   white-space: nowrap;
 }
 .jobs-table tbody tr {
@@ -419,7 +520,7 @@ body {
 }
 .add-job-form { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
 .add-job-form .fgroup { display: flex; flex-direction: column; gap: 3px; }
-.add-job-form .fgroup label { font-size: 9px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; }
+.add-job-form .fgroup label { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; }
 
 /* ── FORM INPUTS ─────────────────────────────────────────────────────────── */
 .form-input {
@@ -428,7 +529,7 @@ body {
   color: var(--text);
   padding: 6px 10px;
   border-radius: 6px;
-  font-size: 11px;
+  font-size: 13px;
   font-family: 'Sora', sans-serif;
   outline: none;
   transition: border-color 0.15s;
@@ -447,7 +548,7 @@ body {
   border: none;
   border-bottom: 1px dashed var(--border2);
   color: var(--text);
-  font-size: 11px;
+  font-size: 13px;
   font-family: 'Sora', sans-serif;
   outline: none;
   padding: 2px 4px;
@@ -460,7 +561,7 @@ body {
   background: rgba(59,130,246,0.06);
   border-radius: 3px 3px 0 0;
 }
-.inline-input.url-field { font-family: 'Space Grotesk', monospace; font-size: 10px; min-width: 160px; color: var(--text2); }
+.inline-input.url-field { font-family: 'Space Grotesk', monospace; font-size: 12px; min-width: 160px; color: var(--text2); }
 .inline-input.url-field.has-val { color: var(--green); border-bottom-color: rgba(16,185,129,0.4); }
 .inline-input::placeholder { color: var(--text3); font-size: 10px; }
 
@@ -469,13 +570,13 @@ body {
   background: var(--card);
   border: 1px solid var(--border);
   color: var(--text);
-  padding: 4px 7px;
+  padding: 5px 8px;
   border-radius: 5px;
-  font-size: 11px;
+  font-size: 12px;
   font-family: 'Sora', sans-serif;
   outline: none;
   cursor: pointer;
-  width: 145px;
+  width: 155px;
   transition: border-color 0.15s, background 0.15s, color 0.15s;
 }
 .status-select:disabled { opacity: 0.25; cursor: not-allowed; }
@@ -595,7 +696,7 @@ body {
 .modal-field { margin-bottom: 14px; }
 .modal-field label {
   display: block;
-  font-size: 10px;
+  font-size: 12px;
   color: var(--text2);
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -609,7 +710,7 @@ body {
   color: var(--text);
   padding: 8px 11px;
   border-radius: 7px;
-  font-size: 12px;
+  font-size: 14px;
   font-family: 'Sora', sans-serif;
   outline: none;
 }
