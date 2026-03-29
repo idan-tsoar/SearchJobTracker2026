@@ -490,7 +490,7 @@ function buildJobRow(coId, job) {
     </td>
     <td>
       <div style="display:flex;gap:4px;align-items:center">
-        <button class="btn-jd${jdCls}" title="Job description &amp; interview guide" onclick="openJdModal('${coId}','${job.id}')">📝</button>
+        <button class="btn-jd${jdCls}" title="Job description &amp; interview guide" onclick="openJdModal('${coId}','${job.id}')">${job.jdesc ? '📝 JD ✓' : '📝'}</button>
         <button class="btn btn-sm btn-danger-ghost" onclick="deleteJob('${coId}','${job.id}')">✕</button>
       </div>
     </td>`;

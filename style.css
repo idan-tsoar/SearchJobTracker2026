@@ -1035,8 +1035,14 @@ body {
   white-space: nowrap;
 }
 .btn-jd:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-glow); }
-.btn-jd.has-jd { border-color: rgba(16,185,129,0.4); color: var(--green); }
-.btn-jd.has-jd:hover { border-color: var(--green); background: rgba(16,185,129,0.08); }
+.btn-jd.has-jd {
+  background: rgba(16,185,129,0.15);
+  border-color: var(--green);
+  color: var(--green);
+  font-weight: 700;
+  box-shadow: 0 0 0 1px rgba(16,185,129,0.25);
+}
+.btn-jd.has-jd:hover { background: rgba(16,185,129,0.28); border-color: var(--green); }
 
 /* ── RESPONSIVE ──────────────────────────────────────────────────────────── */
 @media (max-width: 900px) {
