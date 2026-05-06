@@ -274,6 +274,17 @@ async function loadData() {
   render();
 }
 
+// ── AUTO-SAVE (debounced) ─────────────────────────────────────────────────────
+// Called after every change — actually writes to Firestore 1.5 s after the
+// last action, so rapid edits don't spam the database.
+let _saveTimer = null;
+function scheduleSave() {
+  const ind = document.getElementById('save-ind');
+  if (ind) { ind.textContent = 'Unsaved changes…'; ind.className = 'save-indicator'; }
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(() => saveData(), 1500);
+}
+
 // ── SAVE DATA ────────────────────────────────────────────────────────────────
 async function saveData() {
   const payload = {
@@ -611,7 +622,7 @@ function toggleReviewed(coId, el) {
   }
   const coRow = document.getElementById('co-' + coId);
   if (coRow) coRow.classList.toggle('co-reviewed', reviewed.has(coId));
-  saveData();
+  scheduleSave();
 }
 
 // ── TOGGLE REVIEWED ───────────────────────────────────────────────────────────
@@ -623,7 +634,7 @@ function toggleReviewed(coId, el) {
   }
   const coRow = document.getElementById('co-' + coId);
   if (coRow) coRow.classList.toggle('co-reviewed', reviewed.has(coId));
-  saveData();
+  scheduleSave();
 }
 
 // ── TOGGLE EXPAND ─────────────────────────────────────────────────────────────
@@ -807,6 +818,7 @@ function updateStats() {
   document.getElementById('sc-progress').textContent = prg;
   document.getElementById('sc-offers').textContent   = off;
   document.getElementById('sc-rate').textContent     = rate + '%';
+  scheduleSave(); // auto-save after every state change
 }
 
 // ── FILTERS ───────────────────────────────────────────────────────────────────
@@ -842,6 +854,7 @@ function submitAddCompany() {
   closeAddModal();
   ['m-name','m-domain','m-careers'].forEach(id => { const el=document.getElementById(id); if(el)el.value=''; });
   render();
+  scheduleSave();
   showToast('Company added!');
 }
 
@@ -913,6 +926,7 @@ function closeJdModal() {
       job.jdesc = desc;
       const btn = document.querySelector(`#job-${jobId} .btn-jd`);
       if (btn) btn.classList.toggle('has-jd', !!desc);
+      scheduleSave();
     }
   }
   document.getElementById('modal-jd').classList.add('hidden');
@@ -1118,3 +1132,4 @@ auth.onAuthStateChanged(user => {
   updateAuthUI(user);
   loadData();
 });
+                                                                                                                                                                                                                                                                        
