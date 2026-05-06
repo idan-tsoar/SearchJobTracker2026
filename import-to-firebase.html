@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Import data.json → Firebase</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 16px;
+      padding: 40px;
+      max-width: 560px;
+      width: 100%;
+      box-shadow: 0 25px 50px rgba(0,0,0,0.4);
+    }
+    .logo { font-size: 36px; margin-bottom: 12px; }
+    h1 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+    .subtitle { font-size: 14px; color: #94a3b8; margin-bottom: 32px; line-height: 1.5; }
+
+    .step {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      margin-bottom: 20px;
+      padding: 16px;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      transition: border-color .2s;
+    }
+    .step.active  { border-color: #3b82f6; }
+    .step.done    { border-color: #22c55e; }
+    .step.error   { border-color: #ef4444; }
+
+    .step-num {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: #334155;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; flex-shrink: 0;
+      color: #94a3b8;
+    }
+    .step.active .step-num { background: #3b82f6; color: #fff; }
+    .step.done   .step-num { background: #22c55e; color: #fff; }
+    .step.error  .step-num { background: #ef4444; color: #fff; }
+
+    .step-body { flex: 1; }
+    .step-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+    .step-desc  { font-size: 12px; color: #64748b; line-height: 1.4; }
+    .step.active .step-desc { color: #94a3b8; }
+    .step.done   .step-desc { color: #4ade80; }
+    .step.error  .step-desc { color: #f87171; }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 20px; border-radius: 8px; border: none;
+      font-size: 14px; font-weight: 600; cursor: pointer;
+      transition: all .15s;
+    }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+    .btn-google {
+      background: #fff; color: #1e293b;
+      margin-top: 12px;
+    }
+    .btn-google:hover:not(:disabled) { background: #f1f5f9; }
+    .btn-import {
+      background: #3b82f6; color: #fff;
+      margin-top: 12px; width: 100%;
+      justify-content: center; font-size: 15px; padding: 13px;
+    }
+    .btn-import:hover:not(:disabled) { background: #2563eb; }
+
+    .user-chip {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: #0f172a; border: 1px solid #22c55e;
+      border-radius: 20px; padding: 4px 12px 4px 6px;
+      font-size: 13px; margin-top: 10px;
+    }
+    .user-chip img { width: 22px; height: 22px; border-radius: 50%; }
+
+    .progress-wrap { margin-top: 12px; }
+    .progress-bar-bg {
+      background: #334155; border-radius: 4px; height: 6px; overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%; background: #3b82f6; border-radius: 4px;
+      transition: width .3s ease;
+    }
+    .progress-label { font-size: 12px; color: #94a3b8; margin-top: 6px; }
+
+    .summary {
+      background: #0f172a; border: 1px solid #22c55e;
+      border-radius: 10px; padding: 16px; margin-top: 20px;
+      font-size: 13px; line-height: 1.8;
+    }
+    .summary strong { color: #4ade80; }
+
+    .file-note {
+      font-size: 12px; color: #64748b; margin-top: 8px; line-height: 1.4;
+    }
+    label.file-label {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 8px 14px; border-radius: 7px;
+      border: 1px dashed #475569; background: #0f172a;
+      font-size: 13px; cursor: pointer; color: #94a3b8;
+      margin-top: 10px; transition: border-color .2s;
+    }
+    label.file-label:hover { border-color: #3b82f6; color: #e2e8f0; }
+    #file-input { display: none; }
+    .file-chosen { color: #4ade80; font-size: 12px; margin-top: 6px; }
+  </style>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+</head>
+<body>
+<div class="card">
+  <div class="logo">🔥</div>
+  <h1>Import to Firebase</h1>
+  <p class="subtitle">One-time tool to upload your <code>data.json</code> job tracker data into Firestore.<br>This will <strong>overwrite</strong> any existing cloud data for your account.</p>
+
+  <!-- Step 1: Load file -->
+  <div class="step active" id="step1">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <div class="step-title">Select your data.json file</div>
+      <label class="file-label" for="file-input">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Choose data.json
+      </label>
+      <input type="file" id="file-input" accept=".json">
+      <div class="file-chosen" id="file-chosen" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- Step 2: Sign in -->
+  <div class="step" id="step2">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <div class="step-title">Sign in with Google</div>
+      <div class="step-desc">Data will be saved under your Google account</div>
+      <button class="btn btn-google" id="btn-signin" onclick="signIn()" disabled>
+        <svg viewBox="0 0 18 18" width="16" height="16">
+          <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/>
+          <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/>
+          <path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/>
+          <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z"/>
+        </svg>
+        Sign in with Google
+      </button>
+      <div id="user-info" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- Step 3: Import -->
+  <div class="step" id="step3">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <div class="step-title">Upload to Firestore</div>
+      <div class="step-desc" id="step3-desc">Complete steps 1 and 2 first</div>
+      <button class="btn btn-import" id="btn-import" onclick="runImport()" disabled>
+        🚀 Import All Data Now
+      </button>
+      <div class="progress-wrap" id="progress-wrap" style="display:none">
+        <div class="progress-bar-bg"><div class="progress-bar-fill" id="prog-fill" style="width:0%"></div></div>
+        <div class="progress-label" id="prog-label">Starting…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Success summary -->
+  <div class="summary" id="summary" style="display:none"></div>
+</div>
+
+<script>
+// ── Firebase init ────────────────────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey:            "AIzaSyBER_ehyzY7m1Y_5ucWxhwv-1d5M20QSTk",
+  authDomain:        "search-job-tracker-7df68.firebaseapp.com",
+  projectId:         "search-job-tracker-7df68",
+  storageBucket:     "search-job-tracker-7df68.firebasestorage.app",
+  messagingSenderId: "450038043642",
+  appId:             "1:450038043642:web:63951ac4cd698d7fac0a43",
+  measurementId:     "G-30XJ8YRZJF"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+// ── State ────────────────────────────────────────────────────────────────────
+let currentUser = null;
+let importData  = null;
+
+// ── Step helpers ─────────────────────────────────────────────────────────────
+function setStep(id, state, desc) {
+  const el = document.getElementById(id);
+  el.className = 'step ' + state;
+  if (desc !== undefined) el.querySelector('.step-desc').textContent = desc;
+}
+function checkReady() {
+  const ready = currentUser && importData;
+  document.getElementById('btn-import').disabled = !ready;
+  if (ready) setStep('step3', 'active', 'Ready — click the button below to upload');
+}
+
+// ── Step 1: File picker ───────────────────────────────────────────────────────
+document.getElementById('file-input').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      importData = JSON.parse(ev.target.result);
+      const jobs   = importData.jobs || {};
+      const total  = Object.values(jobs).reduce((s, a) => s + a.length, 0);
+      const cosNum = Object.keys(jobs).length;
+      document.getElementById('file-chosen').style.display = 'block';
+      document.getElementById('file-chosen').textContent =
+        `✅ ${file.name} loaded — ${cosNum} companies, ${total} jobs`;
+      setStep('step1', 'done', `${file.name} loaded successfully`);
+      document.getElementById('btn-signin').disabled = false;
+      setStep('step2', 'active', 'Sign in with Google');
+      checkReady();
+    } catch (err) {
+      setStep('step1', 'error', 'Invalid JSON file — please select data.json');
+    }
+  };
+  reader.readAsText(file);
+});
+
+// ── Step 2: Auth ──────────────────────────────────────────────────────────────
+auth.onAuthStateChanged(user => {
+  currentUser = user;
+  if (user) {
+    document.getElementById('btn-signin').style.display = 'none';
+    document.getElementById('user-info').style.display  = 'block';
+    document.getElementById('user-info').innerHTML = `
+      <div class="user-chip">
+        ${user.photoURL ? `<img src="${user.photoURL}" alt="">` : ''}
+        <span>${user.displayName || user.email}</span>
+      </div>`;
+    setStep('step2', 'done', 'Signed in as ' + (user.displayName || user.email));
+    checkReady();
+  }
+});
+
+function signIn() {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).catch(err => {
+    setStep('step2', 'error', 'Sign-in failed: ' + err.message);
+  });
+}
+
+// ── Step 3: Import ────────────────────────────────────────────────────────────
+async function runImport() {
+  if (!currentUser || !importData) return;
+
+  const btn = document.getElementById('btn-import');
+  btn.disabled = true;
+  btn.textContent = '⏳ Uploading…';
+
+  setStep('step3', 'active', 'Uploading your data to Firestore…');
+  document.getElementById('progress-wrap').style.display = 'block';
+
+  const progFill  = document.getElementById('prog-fill');
+  const progLabel = document.getElementById('prog-label');
+
+  try {
+    const jobs          = importData.jobs            || {};
+    const customCos     = importData.customCompanies || [];
+    const reviewed      = importData.reviewed        || [];
+    const companyIds    = Object.keys(jobs);
+    const totalCompanies = companyIds.length;
+    let done = 0;
+
+    // Upload each company's jobs as a separate sub-document
+    // (keeps individual writes small; Firestore 1MB doc limit safe)
+    const batch = db.batch();
+    const baseRef = db.collection('users').doc(currentUser.uid)
+                      .collection('tracker').doc('data');
+
+    // Build the full payload (mirrors what the app's saveData() produces)
+    const payload = {
+      version:         importData.version || 1,
+      lastSaved:       new Date().toISOString(),
+      jobs:            jobs,
+      customCompanies: customCos,
+      reviewed:        reviewed,
+    };
+
+    progLabel.textContent = 'Writing to Firestore…';
+    progFill.style.width  = '30%';
+
+    await baseRef.set(payload);
+
+    progFill.style.width  = '100%';
+    progLabel.textContent = 'Done!';
+
+    // Count totals for summary
+    const totalJobs = Object.values(jobs).reduce((s, a) => s + a.length, 0);
+    const statuses  = {};
+    Object.values(jobs).forEach(arr =>
+      arr.forEach(j => { statuses[j.status] = (statuses[j.status] || 0) + 1; })
+    );
+
+    setStep('step3', 'done', 'All data uploaded successfully ✅');
+
+    const summaryEl = document.getElementById('summary');
+    summaryEl.style.display = 'block';
+    summaryEl.innerHTML = `
+      <strong>✅ Import complete!</strong><br><br>
+      📂 Companies with jobs: <strong>${totalCompanies}</strong><br>
+      📋 Total jobs imported: <strong>${totalJobs}</strong><br>
+      ✅ Reviewed companies: <strong>${reviewed.length}</strong><br>
+      🏢 Custom companies: <strong>${customCos.length}</strong><br>
+      <br>
+      <span style="color:#94a3b8;font-size:12px">
+        You can now open <strong>index.html</strong> in your browser,
+        sign in with the same Google account, and all your data will load from the cloud.
+      </span>
+    `;
+
+  } catch (err) {
+    console.error(err);
+    setStep('step3', 'error', '❌ Upload failed: ' + err.message);
+    btn.disabled = false;
+    btn.textContent = '🔄 Retry';
+  }
+}
+</script>
+</body>
+</html>

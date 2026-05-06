@@ -1,6 +1,6 @@
 // ── FIREBASE CONFIG ──────────────────────────────────────────────────────────
-// Config is loaded from firebase-config.js (not committed to this repo).
-// See firebase-config.example.js for the required shape.
+// firebaseConfig is loaded from firebase-config.js (excluded from git via .gitignore)
+// See firebase-config.example.js for the shape of the object.
 
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
