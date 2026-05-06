@@ -1,3 +1,66 @@
+// ── FIREBASE CONFIG ──────────────────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey:            "AIzaSyBER_ehyzY7m1Y_5ucWxhwv-1d5M20QSTk",
+  authDomain:        "search-job-tracker-7df68.firebaseapp.com",
+  projectId:         "search-job-tracker-7df68",
+  storageBucket:     "search-job-tracker-7df68.firebasestorage.app",
+  messagingSenderId: "450038043642",
+  appId:             "1:450038043642:web:63951ac4cd698d7fac0a43",
+  measurementId:     "G-30XJ8YRZJF"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+// ── AUTH STATE ───────────────────────────────────────────────────────────────
+let currentUser = null;
+
+function signIn() {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).catch(err => showToast('Sign-in failed: ' + err.message, 'error'));
+}
+
+function signOut() {
+  auth.signOut().then(() => {
+    jobsData  = {};
+    customCos = [];
+    reviewed  = new Set();
+    companies = [...BASE_COMPANIES];
+    expanded  = new Set();
+    showAddForm = new Set();
+    showToast('Signed out — data cleared from view');
+    render();
+  });
+}
+
+function updateAuthUI(user) {
+  const bar = document.getElementById('auth-bar');
+  if (!bar) return;
+  if (user) {
+    bar.innerHTML = `
+      ${user.photoURL ? `<img class="auth-avatar" src="${user.photoURL}" alt="">` : ''}
+      <span class="auth-name">${user.displayName || user.email}</span>
+      <button class="btn btn-ghost btn-sm" onclick="signOut()">Sign out</button>
+    `;
+    bar.classList.add('signed-in');
+  } else {
+    bar.innerHTML = `
+      <span class="auth-hint">Sign in to sync your tracker across devices</span>
+      <button class="btn btn-primary btn-sm auth-google-btn" onclick="signIn()">
+        <svg viewBox="0 0 18 18" width="16" height="16" xmlns="http://www.w3.org/2000/svg">
+          <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/>
+          <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/>
+          <path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/>
+          <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z"/>
+        </svg>
+        Sign in with Google
+      </button>
+    `;
+    bar.classList.remove('signed-in');
+  }
+}
+
 // ── CONSTANTS ────────────────────────────────────────────────────────────────
 const DATA_FILE = 'data.json';
 const VERSION   = 1;
@@ -141,34 +204,59 @@ let fCity='all', fEx='all', fStatus='all', fQ='';
 const LS_KEY = 'idan_job_tracker_v1';
 
 // ── LOAD DATA ────────────────────────────────────────────────────────────────
-// Strategy:
-//   1. Try to fetch data.json (works when served via Live Server / python server)
-//   2. If that fails, fall back to localStorage (works when opened as file://)
-//   3. localStorage is always kept in sync on every save
+// Priority: 1. Firestore (if signed in)  2. data.json  3. localStorage
 async function loadData() {
   let loaded = false;
 
-  // 1. Try data.json
-  try {
-    const res = await fetch('data.json?t=' + Date.now());
-    if (res.ok) {
-      const data = await res.json();
-      // Only use data.json if it has actual job data
-      if (data.jobs && Object.keys(data.jobs).length > 0) {
+  // Reset state
+  jobsData  = {};
+  customCos = [];
+  reviewed  = new Set();
+  companies = [...BASE_COMPANIES];
+
+  // 1. Firestore (signed-in users)
+  if (currentUser) {
+    try {
+      const doc = await db
+        .collection('users').doc(currentUser.uid)
+        .collection('tracker').doc('data')
+        .get();
+      if (doc.exists) {
+        const data = doc.data();
         jobsData  = data.jobs            || {};
         customCos = data.customCompanies || [];
-        customCos.forEach(c => { if (!companies.find(x=>x.id===c.id)) companies.push(c); });
-        // Sync to localStorage so it works offline too
-        localStorage.setItem(LS_KEY, JSON.stringify(data));
-        showToast('Data loaded from data.json');
+        reviewed  = new Set(data.reviewed || []);
+        customCos.forEach(c => { if (!companies.find(x => x.id === c.id)) companies.push(c); });
+        localStorage.setItem(LS_KEY, JSON.stringify(data)); // local backup
+        showToast('Data loaded from cloud ☁️');
         loaded = true;
       }
+    } catch (e) {
+      console.error('Firestore load error:', e);
+      showToast('Cloud load failed — trying local backup', 'error');
     }
-  } catch(e) {
-    // fetch not available (file:// protocol) — that is fine, fall through
   }
 
-  // 2. Fall back to localStorage
+  // 2. Try data.json (works when served via Live Server / python server)
+  if (!loaded) {
+    try {
+      const res = await fetch('data.json?t=' + Date.now());
+      if (res.ok) {
+        const data = await res.json();
+        if (data.jobs && Object.keys(data.jobs).length > 0) {
+          jobsData  = data.jobs            || {};
+          customCos = data.customCompanies || [];
+          reviewed  = new Set(data.reviewed || []);
+          customCos.forEach(c => { if (!companies.find(x => x.id === c.id)) companies.push(c); });
+          localStorage.setItem(LS_KEY, JSON.stringify(data));
+          showToast('Data loaded from data.json');
+          loaded = true;
+        }
+      }
+    } catch (e) { /* file:// protocol or no data.json — fine */ }
+  }
+
+  // 3. Fall back to localStorage
   if (!loaded) {
     try {
       const raw = localStorage.getItem(LS_KEY);
@@ -178,12 +266,12 @@ async function loadData() {
           jobsData  = data.jobs            || {};
           customCos = data.customCompanies || [];
           reviewed  = new Set(data.reviewed || []);
-          customCos.forEach(c => { if (!companies.find(x=>x.id===c.id)) companies.push(c); });
+          customCos.forEach(c => { if (!companies.find(x => x.id === c.id)) companies.push(c); });
           showToast('Data loaded from browser storage');
           loaded = true;
         }
       }
-    } catch(e) {}
+    } catch (e) {}
   }
 
   if (!loaded) {
@@ -194,17 +282,40 @@ async function loadData() {
 }
 
 // ── SAVE DATA ────────────────────────────────────────────────────────────────
-// Saves to localStorage. Export JSON button downloads data.json for backup/portability.
-function saveData() {
-  const payload = { version:VERSION, lastSaved:new Date().toISOString(), jobs:jobsData, customCompanies:customCos, reviewed:[...reviewed] };
-  try {
-    localStorage.setItem(LS_KEY, JSON.stringify(payload));
-    const ind = document.getElementById('save-ind');
-    ind.textContent = 'Saved at ' + new Date().toLocaleTimeString();
+async function saveData() {
+  const payload = {
+    version:         VERSION,
+    lastSaved:       new Date().toISOString(),
+    jobs:            jobsData,
+    customCompanies: customCos,
+    reviewed:        [...reviewed]
+  };
+
+  // Always save to localStorage as offline backup
+  try { localStorage.setItem(LS_KEY, JSON.stringify(payload)); } catch (e) {}
+
+  const ind = document.getElementById('save-ind');
+
+  if (currentUser) {
+    // Save to Firestore
+    try {
+      await db
+        .collection('users').doc(currentUser.uid)
+        .collection('tracker').doc('data')
+        .set(payload);
+      ind.textContent = 'Saved to cloud at ' + new Date().toLocaleTimeString();
+      ind.className   = 'save-indicator ok';
+      showToast('Saved to cloud ☁️');
+    } catch (e) {
+      console.error('Firestore save error:', e);
+      ind.textContent = 'Cloud save failed — saved locally';
+      ind.className   = 'save-indicator ok';
+      showToast('Cloud save failed — data saved locally', 'error');
+    }
+  } else {
+    ind.textContent = 'Saved locally at ' + new Date().toLocaleTimeString();
     ind.className   = 'save-indicator ok';
-    showToast('Saved to browser storage!');
-  } catch(e) {
-    showToast('Save failed — storage might be full', 'error');
+    showToast('Saved to browser storage (sign in to sync ☁️)');
   }
 }
 
@@ -1006,4 +1117,11 @@ function initTheme() {
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 initTheme();
-loadData(); // async — fetches data.json first, falls back to localStorage
+
+// Bootstrap: auth state drives loadData so data is always user-specific.
+// onAuthStateChanged fires immediately (user=null if not signed in).
+auth.onAuthStateChanged(user => {
+  currentUser = user;
+  updateAuthUI(user);
+  loadData();
+});
