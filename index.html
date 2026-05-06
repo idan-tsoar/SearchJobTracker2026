@@ -13,8 +13,18 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-  <!-- Firebase config — excluded from git, never committed (see .gitignore) -->
-  <script src="firebase-config.js"></script>
+  <!-- Firebase config (web API keys are public by design — security via Firestore rules) -->
+  <script>
+    const firebaseConfig = {
+      apiKey:            "AIzaSyBER_ehyzY7m1Y_5ucWxhwv-1d5M20QSTk",
+      authDomain:        "search-job-tracker-7df68.firebaseapp.com",
+      projectId:         "search-job-tracker-7df68",
+      storageBucket:     "search-job-tracker-7df68.firebasestorage.app",
+      messagingSenderId: "450038043642",
+      appId:             "1:450038043642:web:63951ac4cd698d7fac0a43",
+      measurementId:     "G-30XJ8YRZJF"
+    };
+  </script>
 </head>
 <body>
 
